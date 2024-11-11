@@ -86,6 +86,7 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 	int defBonusWidth = 40;
 	int defBonusHeight = 40;
 	int bonusScoreValue = 5;
+	double bonusLuckValue = 0.1;
 
 	// Biến mặc định khởi tạo trọng lực và vận tốc tức thời
 	double defBirdVelocityY = -10;
@@ -215,7 +216,7 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 		if (bonus == null) {
 			Random random = new Random();
 			double x = random.nextDouble();
-			if (x < 0.4) {
+			if (x < bonusLuckValue) {
 				int bonusY = topPipe.y + defPipeHeight + openingSpace / 2 - defBonusHeight / 2;
 				int bonusX = defPipeX + defPipeWidth / 2 - defBonusWidth / 2;
 				bonus = new Bonus(bonusX, bonusY, bonusScoreImage);
