@@ -111,39 +111,39 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 	int birdAnimationIndex = 0;
 
 	Image[] backgroundImages = new Image[] {
-			new ImageIcon("imgs/bg_day.png").getImage(),
-			new ImageIcon("imgs/bg_night.png").getImage()
+			new ImageIcon(getClass().getResource("imgs/bg_day.png")).getImage(),
+			new ImageIcon(getClass().getResource("imgs/bg_night.png")).getImage()
 	};
 	Image[] pipeTopImages = new Image[] {
-			new ImageIcon("imgs/pipe_top_day.png").getImage(),
-			new ImageIcon("imgs/pipe_top_night.png").getImage()
+			new ImageIcon(getClass().getResource("imgs/pipe_top_day.png")).getImage(),
+			new ImageIcon(getClass().getResource("imgs/pipe_top_night.png")).getImage()
 	};
 	Image[] pipeBottomImages = new Image[] {
-			new ImageIcon("imgs/pipe_bottom_day.png").getImage(),
-			new ImageIcon("imgs/pipe_bottom_night.png").getImage()
+			new ImageIcon(getClass().getResource("imgs/pipe_bottom_day.png")).getImage(),
+			new ImageIcon(getClass().getResource("imgs/pipe_bottom_night.png")).getImage()
 
 	};
 	Image[][] birdImages = new Image[][] {
 			{
-					new ImageIcon("imgs/bird_one_1.png").getImage(),
-					new ImageIcon("imgs/bird_one_2.png").getImage(),
-					new ImageIcon("imgs/bird_one_3.png").getImage(),
-					new ImageIcon("imgs/bird_one_2.png").getImage(),
+					new ImageIcon(getClass().getResource("imgs/bird_one_1.png")).getImage(),
+					new ImageIcon(getClass().getResource("imgs/bird_one_2.png")).getImage(),
+					new ImageIcon(getClass().getResource("imgs/bird_one_3.png")).getImage(),
+					new ImageIcon(getClass().getResource("imgs/bird_one_2.png")).getImage(),
 			},
 			{
-					new ImageIcon("imgs/bird_two_1.png").getImage(),
-					new ImageIcon("imgs/bird_two_2.png").getImage(),
-					new ImageIcon("imgs/bird_two_3.png").getImage(),
-					new ImageIcon("imgs/bird_two_2.png").getImage(),
+					new ImageIcon(getClass().getResource("imgs/bird_two_1.png")).getImage(),
+					new ImageIcon(getClass().getResource("imgs/bird_two_2.png")).getImage(),
+					new ImageIcon(getClass().getResource("imgs/bird_two_3.png")).getImage(),
+					new ImageIcon(getClass().getResource("imgs/bird_two_2.png")).getImage(),
 			},
 			{
-					new ImageIcon("imgs/bird_three_1.png").getImage(),
-					new ImageIcon("imgs/bird_three_2.png").getImage(),
-					new ImageIcon("imgs/bird_three_3.png").getImage(),
-					new ImageIcon("imgs/bird_three_2.png").getImage(),
+					new ImageIcon(getClass().getResource("imgs/bird_three_1.png")).getImage(),
+					new ImageIcon(getClass().getResource("imgs/bird_three_2.png")).getImage(),
+					new ImageIcon(getClass().getResource("imgs/bird_three_3.png")).getImage(),
+					new ImageIcon(getClass().getResource("imgs/bird_three_2.png")).getImage(),
 			},
 	};
-	Image bonusScoreImage = new ImageIcon("imgs/bonus_score.png").getImage();
+	Image bonusScoreImage = new ImageIcon(getClass().getResource("imgs/bonus_score.png")).getImage();
 
 	// ------------------------------
 
