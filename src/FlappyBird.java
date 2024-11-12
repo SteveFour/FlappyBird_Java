@@ -5,6 +5,9 @@ import javax.sound.sampled.*;
 import javax.swing.*;
 import javax.swing.Timer;
 import java.io.IOException;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 
 public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 	class Bird {
@@ -48,7 +51,8 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 
 	// ------------------------------
 
-	// Biến có "def_" lưu các biến mặc định, giá trị được áp dụng khi khởi tạo game mới
+	// Biến có "def_" lưu các biến mặc định, giá trị được áp dụng khi khởi tạo game
+	// mới
 	// Biến ko "def_" lưu trữ giá trị tạm thời của game
 
 	ArrayList<Pipe> pipesList;
@@ -73,7 +77,7 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 	// Biến mặc định khởi tạo bird
 	int defBirdWidth = 51;
 	int defBirdHeight = 36;
-	int defBirdX = frameHeight / 8;
+	int defBirdX = frameWidth / 4;
 	int defBirdY = frameHeight / 2;
 
 	// Biến mặc định khởi tạo ống
@@ -86,7 +90,7 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 	int defBonusWidth = 40;
 	int defBonusHeight = 40;
 	int bonusScoreValue = 5;
-	double bonusLuckValue = 0.1;
+	double bonusLuckValue = 0.4;
 
 	// Biến mặc định khởi tạo trọng lực và vận tốc tức thời
 	double defBirdVelocityY = -10;
@@ -102,6 +106,7 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 	double difficultyScale = 1.01;
 	boolean gameOver = false;
 	boolean delayGameOver = false;
+	double highScore;
 
 	// Biến lưu index của các ảnh/sprite
 	int backgroundIndex = 0;
@@ -109,6 +114,10 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 	int pipeBottomIndex = 0;
 	int birdColorIndex = 0;
 	int birdAnimationIndex = 0;
+
+	// Chạy lần đầu
+	boolean isIntro = true;
+	Image introInstructionImage;
 
 	Image[] backgroundImages = new Image[] {
 			new ImageIcon(getClass().getResource("imgs/bg_day.png")).getImage(),
@@ -144,17 +153,26 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 			},
 	};
 	Image bonusScoreImage = new ImageIcon(getClass().getResource("imgs/bonus_score.png")).getImage();
+	Image resultOverlayImage = new ImageIcon(getClass().getResource("imgs/result_overlay_bg.png")).getImage();
 
 	// ------------------------------
 
-	FlappyBird() {
-		// Set kích cỡ frame và focus event bàn phím
+	FlappyBird() throws FileNotFoundException {
+		Scanner sc = new Scanner(new File("highScore.txt"));
+		highScore = sc.nextDouble();
+
+		// Set frame size and focus
 		setPreferredSize(new Dimension(frameWidth, frameHeight));
 		setFocusable(true);
 		addKeyListener(this);
 
-		// Tạo bird, gán animation = Timer animateBird, loop qua các ảnh của bird
+		// Load the intro instruction image
+		introInstructionImage = new ImageIcon(getClass().getResource("imgs/intro_instruction.png")).getImage();
+
+		// Initialize bird
 		bird = new Bird(defBirdX, defBirdY, birdImages[birdColorIndex][birdAnimationIndex]);
+
+		// Set up timers but don't start them yet
 		animateBird = new Timer(defAnimateBirdDelay, new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -162,9 +180,7 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 				birdAnimationIndex = (birdAnimationIndex + 1) % 4;
 			}
 		});
-		animateBird.start();
 
-		// Tạo ống, thêm ống vào danh sách các ống, và tăng độ khó game theo các ống
 		pipesList = new ArrayList<Pipe>();
 		placePipesTimer = new Timer(defPlacePipesDelay, new ActionListener() {
 			@Override
@@ -173,14 +189,19 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 				placePipes();
 			}
 		});
-		placePipesTimer.start();
 
-		// Timer để vẽ và cập nhật khung hình
 		gameLoop = new Timer(defGameLoopDelay, this);
-		gameLoop.start();
+
+		sc.close();
 	}
 
 	// -----------------------------
+
+	public void startGame() {
+		animateBird.start();
+		placePipesTimer.start();
+		gameLoop.start();
+	}
 
 	// Hàm khởi tạo để có thể phát âm thanh
 	public void playSound(String audioFile) {
@@ -242,7 +263,24 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 	// Gọi hàm repaint() -> Yêu cầu Swing gọi hàm paintComponent()
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		draw(g);
+
+		if (isIntro) {
+			// Draw background
+			g.drawImage(backgroundImages[backgroundIndex], 0, 0, frameWidth, frameHeight, null);
+
+			// Draw bird at default position
+			g.drawImage(bird.img, bird.x, bird.y, defBirdWidth, defBirdHeight, null);
+
+			// Draw intro instruction image at center
+			int introWidth = introInstructionImage.getWidth(null) * 3;
+			int introHeight = introInstructionImage.getHeight(null) * 3;
+			int introX = frameWidth / 4 - introWidth / 2 + 25;
+			int introY = frameHeight / 2 - introHeight / 2 + 90;
+			
+			g.drawImage(introInstructionImage, introX, introY, introWidth, introHeight, null);
+		} else {
+			draw(g);
+		}
 	}
 
 	// Chuyển đổi vận tốc Oy của Bird -> Góc nghiêng của Bird
@@ -276,11 +314,20 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 		g2d.setColor(Color.black);
 		g2d.setFont(new Font("Arial", Font.PLAIN, 32));
 		if (gameOver) {
-			g2d.drawString("Game over. Score: " + String.valueOf((int) score), 10, 35);
+			if (score > highScore) {
+				highScore = score;
+			}
+			
+			int overlayWidth = 113 * 3;
+			int overlayHeight = 57 * 3;
+			g2d.drawImage(resultOverlayImage, frameWidth / 2 - overlayWidth / 2, frameHeight / 2 - overlayHeight / 2 - 40, overlayWidth, overlayHeight, null);
+
+			g2d.drawString("GAME OVER!", 75, 305);
+			g2d.drawString("Your score: " + String.valueOf((int) score), 75, 355);
+			g2d.drawString("Highest score: " + String.valueOf((int) highScore), 75, 405);
 		} else {
 			g2d.drawString("Score: " + (int) score, 10, 35);
 		}
-
 
 		// Để nghiêng đc sprite/ảnh của Bird, cần xác định:
 		// 1. Tâm điểm của Bird (centerX, centerY)
@@ -371,17 +418,16 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 
 	@Override
 	public void keyPressed(KeyEvent e) {
-		// Cập nhật sự kiện khi bấm phím SPACE
+		// Handle space key press
 		if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-			if (!gameOver) {
+			if (isIntro) {
+				isIntro = false;
+				startGame();
+			} else if (!gameOver) {
 				birdVelocityY = birdFlapForce;
 				playSound("/audios/sfx_wing.wav");
-			}
-
-			// Nếu đã gameOver & qua delayGameOver, phím SPACE để restart game
-			// 1. Random theme và bird
-			// 2. Reset các biến
-			if (gameOver && !delayGameOver) {
+			} else if (gameOver && !delayGameOver) {
+				// Existing game reset code
 				Random random = new Random();
 				birdColorIndex = random.nextInt(birdImages.length);
 				backgroundIndex = random.nextInt(backgroundImages.length);
@@ -399,9 +445,8 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 				placePipesTimer.setDelay(placePipesDelay);
 				gameOver = false;
 				pipesList.clear();
-				gameLoop.start();
-				placePipesTimer.start();
-				animateBird.start();
+
+				startGame();
 			}
 		}
 	}
@@ -426,6 +471,15 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 				birdVelocityY = 0;
 				playSound("/audios/sfx_impact.wav");
 				playSound("/audios/sfx_die.wav");
+
+				if (score > highScore) {
+					highScore = score;
+					try (PrintWriter out = new PrintWriter("highScore.txt")) {
+						out.println(highScore);
+					} catch (FileNotFoundException ex) {
+						ex.printStackTrace();
+					}
+				}
 
 				Timer delayTimer = new Timer(gameOverDelay, new ActionListener() {
 					@Override
