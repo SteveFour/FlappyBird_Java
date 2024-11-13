@@ -9,7 +9,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 
-public class FlappyBird extends JPanel implements ActionListener, KeyListener {
+public class FlappyBird extends JPanel implements KeyListener {
 	class Bird {
 		int x;
 		int y;
@@ -59,7 +59,6 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 	Bird bird;
 	Bonus bonus = null;
 
-	Timer gameLoop;
 	Timer placePipesTimer;
 	Timer animateBird;
 
@@ -93,12 +92,13 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 	double bonusLuckValue = 0.4;
 
 	// Biến mặc định khởi tạo trọng lực và vận tốc tức thời
-	double defBirdVelocityY = -10;
-	double birdFlapForce = defBirdVelocityY;
-	double defPipeVelocityX = -4;
-	double defGravity = 1;
+	double defPipeVelocityX = -120; // -4 pixels/frame * 60 frames/sec = -240 pixels/sec
+	double defBirdVelocityY = -300;  // -10 pixels/frame * 60 frames/sec = -600 pixels/sec
+	double defGravity = 1000;          // 1 pixel/frame^2 * 60 frames/sec = 60 pixels/sec^2
+
 	double gravity = defGravity;
 	double birdVelocityY = defBirdVelocityY;
+	double birdFlapForce = defBirdVelocityY;
 	double pipeVelocityX = defPipeVelocityX;
 
 	// Biến lưu điểm và trạng thái game
@@ -190,7 +190,24 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 			}
 		});
 
-		gameLoop = new Timer(defGameLoopDelay, this);
+		// Start the game thread
+		new Thread(() -> {
+			long lastTime = System.nanoTime();
+			while (true) {
+				long currentTime = System.nanoTime();
+				double deltaTime = (currentTime - lastTime) / 1_000_000_000.0; // In seconds
+				lastTime = currentTime;
+
+				update(deltaTime);
+				repaint();
+
+				try {
+					Thread.sleep(16); // Approximate 60 FPS
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}).start();
 
 		sc.close();
 	}
@@ -200,7 +217,6 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 	public void startGame() {
 		animateBird.start();
 		placePipesTimer.start();
-		gameLoop.start();
 	}
 
 	// Hàm khởi tạo để có thể phát âm thanh
@@ -342,59 +358,6 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 		g2d.dispose();
 	}
 
-	// Cập nhật các sự kiện game mỗi khung hình
-	public void move() {
-		// Cập nhật toạ độ của Bird
-		birdVelocityY += gravity;
-		bird.y += birdVelocityY;
-		bird.y = Math.max(bird.y, 0);
-
-		// Cập nhật toạ độ từng ống
-		Iterator<Pipe> iterator = pipesList.iterator();
-		while (iterator.hasNext()) {
-			Pipe pipe = iterator.next();
-			pipe.x += pipeVelocityX;
-
-			if (!pipe.passed && bird.x > pipe.x + defPipeWidth) {
-				playSound("./audios/sfx_point.wav");
-				pipe.passed = true;
-				score += 0.5;
-			}
-
-			if (collision(bird, pipe)) {
-				gameOver = true;
-			}
-
-			// Tối ưu: Giải phóng ống nếu như ống đi ngoài màn hình
-			if (pipe.x + defPipeWidth < 0) {
-				iterator.remove();
-			}
-		}
-
-		// Cập nhật toạ độ cho ống
-		if (bonus != null) {
-			bonus.x += pipeVelocityX;
-
-			if (collisionBonus(bird, bonus)) {
-				score += bonusScoreValue;
-				playSound("./audios/sfx_powerup_bonus.wav");
-				bonus = null;
-				for (int count = 1; count <= bonusScoreValue; count++)
-					increaseDifficult();
-			}
-
-			// Tối ưu: Giải phóng powerup nếu như powerup đi ngoài màn hình
-			if (bonus != null && bonus.x + defBonusWidth < 0) {
-				bonus = null;
-			}
-		}
-
-		// Nếu rơi xuống thì gameover
-		if (bird.y + defBirdHeight > frameHeight) {
-			gameOver = true;
-		}
-	}
-
 	// Va chạm Bird - ống
 	public boolean collision(Bird a, Pipe b) {
 		// int noHeadBumb = 1;
@@ -455,17 +418,63 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 	public void keyReleased(KeyEvent e) {
 	}
 
-	@Override
-	public void actionPerformed(ActionEvent e) {
-		move();
-		repaint();
+	// Add update method to replace actionPerformed
+	public void update(double deltaTime) {
+		// Update bird position
+		System.out.println(deltaTime);
+		birdVelocityY += gravity * deltaTime;
+		bird.y += birdVelocityY * deltaTime;
+		bird.y = Math.max(bird.y, 0);
 
+		// Update pipes position
+		synchronized (pipesList) {
+			Iterator<Pipe> iterator = pipesList.iterator();
+			while (iterator.hasNext()) {
+				Pipe pipe = iterator.next();
+				pipe.x += pipeVelocityX * deltaTime;
+
+				if (!pipe.passed && bird.x > pipe.x + defPipeWidth) {
+					playSound("./audios/sfx_point.wav");
+					pipe.passed = true;
+					score += 0.5;
+				}
+
+				if (collision(bird, pipe)) {
+					gameOver = true;
+				}
+
+				if (pipe.x + defPipeWidth < 0) {
+					iterator.remove();
+				}
+			}
+		}
+
+		// Update bonus position
+		if (bonus != null) {
+			bonus.x += pipeVelocityX * deltaTime;
+
+			if (collisionBonus(bird, bonus)) {
+				score += bonusScoreValue;
+				playSound("./audios/sfx_powerup_bonus.wav");
+				bonus = null;
+				for (int count = 1; count <= bonusScoreValue; count++)
+					increaseDifficult();
+			}
+
+			// Remove bonus if it moves off-screen
+			if (bonus != null && bonus.x + defBonusWidth < 0) {
+				bonus = null;
+			}
+		}
+
+		// Check for game over conditions
+		if (bird.y + defBirdHeight > frameHeight) {
+			gameOver = true;
+		}
+
+		// Handle game over logic
 		if (gameOver) {
-			// Nếu gameOver:
-			// 1. delayGameOver để chặn điều khiển người dùng
-			// 2. Ngừng di chuyển cho Pipe
-			// 3. Timer delayTimer để chờ mở lại điều khiển người dùng
-			if (gameOver && !delayGameOver) {
+			if (!delayGameOver) {
 				delayGameOver = true;
 				pipeVelocityX = 0;
 				birdVelocityY = 0;
@@ -486,11 +495,10 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 					public void actionPerformed(ActionEvent evt) {
 						placePipesTimer.stop();
 						animateBird.stop();
-						gameLoop.stop();
 						delayGameOver = false;
 					}
 				});
-				delayTimer.setRepeats(false); // Đảm bảo Timer ko bị lặp lại
+				delayTimer.setRepeats(false); // Ensure the Timer doesn't repeat
 				delayTimer.start();
 			}
 		}
