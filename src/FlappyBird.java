@@ -1,6 +1,8 @@
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
+import java.util.List;
+
 import javax.sound.sampled.*;
 import javax.swing.*;
 import javax.swing.Timer;
@@ -107,6 +109,7 @@ public class FlappyBird extends JPanel implements KeyListener {
 	boolean gameOver = false;
 	boolean delayGameOver = false;
 	double highScore;
+	boolean readyNextGame = false;
 
 	// Biến lưu index của các ảnh/sprite
 	int backgroundIndex = 0;
@@ -154,6 +157,7 @@ public class FlappyBird extends JPanel implements KeyListener {
 	};
 	Image bonusScoreImage = new ImageIcon(getClass().getResource("imgs/bonus_score.png")).getImage();
 	Image resultOverlayImage = new ImageIcon(getClass().getResource("imgs/result_overlay_bg.png")).getImage();
+	List<Pipe> pipesToRemove = new ArrayList<>();
 
 	// ------------------------------
 
@@ -267,7 +271,7 @@ public class FlappyBird extends JPanel implements KeyListener {
 	// 3. Tăng vận tốc ống
 	// 4. Giảm delay đặt các ống
 	public void increaseDifficult() {
-		if (gravity <= 2) {
+		if (gravity <= 2000) {
 			birdFlapForce *= difficultyScale;
 		}
 		gravity *= difficultyScale;
@@ -301,7 +305,7 @@ public class FlappyBird extends JPanel implements KeyListener {
 
 	// Chuyển đổi vận tốc Oy của Bird -> Góc nghiêng của Bird
 	public double convertGravityToAngle(double birdVelocityY2) {
-		double angle = birdVelocityY2 * 3;
+		double angle = birdVelocityY2 / 10;
 
 		if (angle < -60)
 			angle = -60;
@@ -360,6 +364,8 @@ public class FlappyBird extends JPanel implements KeyListener {
 
 	// Va chạm Bird - ống
 	public boolean collision(Bird a, Pipe b) {
+		if (gameOver)
+			return false;
 		// int noHeadBumb = 1;
 		return a.x + 8 < b.x + defPipeWidth &&
 				a.x + defBirdWidth - 8 > b.x &&
@@ -389,7 +395,7 @@ public class FlappyBird extends JPanel implements KeyListener {
 			} else if (!gameOver) {
 				birdVelocityY = birdFlapForce;
 				playSound("/audios/sfx_wing.wav");
-			} else if (gameOver && !delayGameOver) {
+			} else if (gameOver && readyNextGame) {
 				// Existing game reset code
 				Random random = new Random();
 				birdColorIndex = random.nextInt(birdImages.length);
@@ -407,6 +413,7 @@ public class FlappyBird extends JPanel implements KeyListener {
 				placePipesDelay = defPlacePipesDelay;
 				placePipesTimer.setDelay(placePipesDelay);
 				gameOver = false;
+				readyNextGame = false;
 				pipesList.clear();
 
 				startGame();
@@ -421,7 +428,6 @@ public class FlappyBird extends JPanel implements KeyListener {
 	// Add update method to replace actionPerformed
 	public void update(double deltaTime) {
 		// Update bird position
-		System.out.println(deltaTime);
 		birdVelocityY += gravity * deltaTime;
 		bird.y += birdVelocityY * deltaTime;
 		bird.y = Math.max(bird.y, 0);
@@ -432,17 +438,14 @@ public class FlappyBird extends JPanel implements KeyListener {
 			while (iterator.hasNext()) {
 				Pipe pipe = iterator.next();
 				pipe.x += pipeVelocityX * deltaTime;
-
 				if (!pipe.passed && bird.x > pipe.x + defPipeWidth) {
 					playSound("./audios/sfx_point.wav");
 					pipe.passed = true;
 					score += 0.5;
 				}
-
 				if (collision(bird, pipe)) {
 					gameOver = true;
 				}
-
 				if (pipe.x + defPipeWidth < 0) {
 					iterator.remove();
 				}
@@ -496,6 +499,7 @@ public class FlappyBird extends JPanel implements KeyListener {
 						placePipesTimer.stop();
 						animateBird.stop();
 						delayGameOver = false;
+						readyNextGame = true;
 					}
 				});
 				delayTimer.setRepeats(false); // Ensure the Timer doesn't repeat
